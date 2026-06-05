@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+{% querystring %}
+<form method="get">
+  {{ filter.form.as_p }}
+  <input type="submit">
+</form>
+<br>
+
+<table border="1">
+  <thead>
+  <tr>
+    <th colspan="2">Buy</th>
+    <th colspan="2">Sell</th>
+  </tr>
+  <tr>
+    <th>Exchange</th>
+    <th>Symbol</th>
+    <th>Exchange</th>
+    <th>Symbol</th>
+    <th>Margin, %</th>
+    <th>Updated</th>
+  </tr>
+  </thead>
+  <tbody>
+  {% for obj in object_list %}
+  <tr>
+    <td>{{ obj.buy_exchange }}</td>
+    <td>{{ obj.buy_symbol }}</td>
+    <td>{{ obj.sell_exchange }}</td>
+    <td>{{ obj.sell_symbol }}</td>
+    <td>{{ obj.margin }}</td>
+    <td>{{ obj.timestamp }}</td>
+    <td><a href="{{ obj.history_url }}">history</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="{% querystring page=1 %}">&laquo; first</a>
+            <a href="{% querystring page=page_obj.previous_page_number %}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="{% querystring page=page_obj.next_page_number %}">next</a>
+            <a href="{% querystring page=page_obj.paginator.num_pages %}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+
+</body>
+</html>
