@@ -1,7 +1,8 @@
 django==6.0.5
 django-filter==25.2
 djangorestframework==3.17.1
-faststream==0.6.7
+django-debug-toolbar==6.3.0
+faststream[cli, rabbit]==0.6.7
 starlette==1.2.0
 pytest==9.0.3
 pytest-asyncio==1.4.0
