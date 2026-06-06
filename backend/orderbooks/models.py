@@ -1,5 +1,7 @@
 from django.db import models
 
+from .managers import LatestArbitrageDataManager
+
 
 class Exchange(models.Model):
     id = models.CharField(primary_key=True)
@@ -112,3 +114,8 @@ class ArbitrageData(models.Model):
     margin = models.FloatField()
     volume_base = models.FloatField()
     volume_quote = models.FloatField()
+
+    latest = LatestArbitrageDataManager()
+
+    class Meta:
+        unique_together = ('arbitrage', 'timestamp')
