@@ -4,7 +4,6 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('orderbooks.urls')),
     path('api/', include('api.urls')),
 ]
 
