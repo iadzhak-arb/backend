@@ -1,20 +1,78 @@
 import datetime as dt
 import itertools
+import functools
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from faststream import Logger
 from faststream.rabbit import RabbitRouter, RabbitQueue
-from faststream.rabbit.schemas import exchange
 
 from .dto import OrderbookDTO, ExchangeDTO, SymbolDTO
-from .models import Exchange, Token, Symbol, Market, Orderbook, Arbitrage, OrderbookData
+from .models import Exchange, Token, Symbol, Market, Orderbook, Arbitrage, OrderbookData, ArbitrageData
 from .utils import calculate_max_arbitrage
 
 router = RabbitRouter()
 queue = RabbitQueue(settings.QUEUE_ORDERBOOKS, durable=True)
+
+
+@functools.lru_cache(maxsize=10)
+def get_token(t: str) -> Token:
+    token, _ = Token.objects.get_or_create(id=t)
+    return token
+
+
+@functools.lru_cache(maxsize=5)
+def get_market(m: str) -> Market:
+    market, _ = Market.objects.get_or_create(id=m)
+    return market
+
+
+@functools.lru_cache(maxsize=5)
+def get_symbol(id: str, market: str, base: str, quote: str, settle: str | None) -> Symbol:
+    try:
+        symbol = Symbol.objects.get(id=id)
+    except ObjectDoesNotExist:
+        try:
+            symbol = Symbol.objects.create(
+                id=id,
+                market=get_market(market),
+                base=get_token(base),
+                quote=get_token(quote),
+                settle=get_token(settle) if settle else None,
+            )
+        except IntegrityError:
+            symbol = Symbol.objects.get(id=id)
+    return symbol
+
+
+@functools.lru_cache(maxsize=7)
+def get_exchange(id: str, name: str) -> Exchange:
+    exchange, _ = Exchange.objects.get_or_create(id=id, defaults={'name': name})
+    return exchange
+
+
+def get_orderbook(ob: OrderbookDTO) -> Orderbook:
+    try:
+        orderbook = Orderbook.objects.get(
+            symbol__id=ob.symbol.id,
+            exchange__id=ob.exchange.id,
+        )
+    except ObjectDoesNotExist:
+        symbol = get_symbol(**ob.symbol.model_dump())
+        exchange = get_exchange(**ob.exchange.model_dump())
+        try:
+            orderbook = Orderbook.objects.create(
+                symbol=symbol,
+                exchange=exchange
+            )
+        except IntegrityError:
+            orderbook = Orderbook.objects.get(
+                symbol=symbol,
+                exchange=exchange
+            )
+    return orderbook
 
 
 @router.subscriber(queue)
@@ -22,34 +80,7 @@ def handle_orderbooks(data: list[OrderbookDTO], logger: Logger):
     # Save orderbooks data
     orderbooks_data = []
     for d in data:
-        try:
-            orderbook = Orderbook.objects.get(
-                symbol__id=d.symbol.id,
-                exchange__id=d.exchange.id,
-            )
-        except ObjectDoesNotExist:
-            try:
-                symbol = Symbol.objects.get(id=d.symbol.id)
-            except ObjectDoesNotExist:
-                symbol, _ = Symbol.objects.get_or_create(
-                    id=d.symbol.id,
-                    defaults={
-                        'base': Token.objects.get_or_create(id=d.symbol.base)[0],
-                        'quote': Token.objects.get_or_create(id=d.symbol.quote)[0],
-                        'settle': Token.objects.get_or_create(id=d.symbol.settle)[0] if d.symbol.settle else None,
-                        'market': Market.objects.get_or_create(id=d.symbol.market)[0]
-                    }
-                )
-            exchange, _ = Exchange.objects.get_or_create(
-                id=d.exchange.id,
-                defaults={
-                    'name': d.exchange.name,
-                }
-            )
-            orderbook, _ = Orderbook.objects.get_or_create(
-                symbol=symbol,
-                exchange=exchange,
-            )
+        orderbook = get_orderbook(d)
         timestamp = dt.datetime.fromtimestamp(
             d.timestamp,
             tz=timezone.get_default_timezone()
@@ -65,19 +96,20 @@ def handle_orderbooks(data: list[OrderbookDTO], logger: Logger):
         OrderbookData.objects.bulk_create(orderbooks_data, ignore_conflicts=True)
     logger.info(f'Proceeded {len(orderbooks_data)} new orderbooks.')
     # Calculate arbitrage
-    arbitrages = []
-    for ob_buy, ob_sell in itertools.product(orderbooks, repeat=2):
+    arbitrage_data = []
+    for ob_buy, ob_sell in itertools.product(orderbooks_data, repeat=2):
         try:
             result = calculate_max_arbitrage(ob_buy.asks, ob_sell.bids)
         except ValueError:
             continue
         margin, volume_base, volume_quote = result
-        arbitrages.append(
-            Arbitrage(
-                buy_exchange=ob_buy.exchange,
-                buy_symbol=ob_buy.symbol,
-                sell_exchange=ob_sell.exchange,
-                sell_symbol=ob_sell.symbol,
+        arbitrage, _ = Arbitrage.objects.get_or_create(
+            ob_buy=ob_buy.orderbook,
+            ob_sell=ob_sell.orderbook,
+        )
+        arbitrage_data.append(
+            ArbitrageData(
+                arbitrage=arbitrage,
                 timestamp=min(ob_buy.timestamp, ob_sell.timestamp),
                 margin=margin,
                 volume_base=volume_base,
@@ -85,6 +117,6 @@ def handle_orderbooks(data: list[OrderbookDTO], logger: Logger):
             )
         )
     with transaction.atomic():
-        Arbitrage.objects.bulk_create(arbitrages, ignore_conflicts=True)
+        ArbitrageData.objects.bulk_create(arbitrage_data, ignore_conflicts=True)
 
-    logger.info(f'Proceeded {len(arbitrages)} new arbitrages.')
+    logger.info(f'Proceeded {len(arbitrage_data)} new arbitrages.')

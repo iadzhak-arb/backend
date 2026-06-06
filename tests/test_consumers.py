@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from orderbooks.models import Orderbook, Arbitrage
+from orderbooks.models import Orderbook, Arbitrage, OrderbookData, ArbitrageData
 from orderbooks.consumers import handle_orderbooks
 from orderbooks.dto import ExchangeDTO, SymbolDTO, OrderbookDTO
 
@@ -13,6 +13,7 @@ from orderbooks.dto import ExchangeDTO, SymbolDTO, OrderbookDTO
 def test_handle_orderbooks():
     logger = mock.create_autospec(logging.getLogger())
     Orderbook.objects.all().delete()
+    OrderbookData.objects.all().delete()
     Arbitrage.objects.all().delete()
 
     mock_timestamp = dt.datetime.now().timestamp()
@@ -25,21 +26,25 @@ def test_handle_orderbooks():
     handle_orderbooks(mock_data, logger)
 
     assert Orderbook.objects.count() == 1
-    ob = Orderbook.objects.select_related('symbol', 'exchange').get()
+    ob = Orderbook.objects.get()
     assert ob.symbol.id == mock_symbol.id
     assert ob.exchange.id == mock_exchange.id
     assert ob.exchange.name == mock_exchange.name
-    assert ob.timestamp.timestamp() == mock_timestamp
-    assert ob.asks == mock_orderbook.asks
-    assert ob.bids == mock_orderbook.bids
+    assert OrderbookData.objects.count() == 1
+    ob_data = OrderbookData.objects.get()
+    assert ob_data.orderbook == ob
+    assert ob_data.timestamp.timestamp() == mock_timestamp
+    assert ob_data.asks == mock_orderbook.asks
+    assert ob_data.bids == mock_orderbook.bids
 
     assert Arbitrage.objects.count() == 1
     arb = Arbitrage.objects.get()
-    assert arb.buy_exchange == ob.exchange
-    assert arb.buy_symbol == ob.symbol
-    assert arb.sell_exchange == ob.exchange
-    assert arb.sell_symbol == ob.symbol
-    assert arb.timestamp == ob.timestamp
-    assert arb.margin == -10
-    assert arb.volume_base == 1
-    assert arb.volume_quote == 100
+    assert arb.ob_buy == ob
+    assert arb.ob_sell == ob
+    assert ArbitrageData.objects.count() == 1
+    arb_data = ArbitrageData.objects.get()
+    assert arb_data.arbitrage == arb
+    assert arb_data.timestamp == ob_data.timestamp
+    assert arb_data.margin == -10
+    assert arb_data.volume_base == 1
+    assert arb_data.volume_quote == 100
