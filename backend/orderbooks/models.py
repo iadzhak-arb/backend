@@ -77,6 +77,9 @@ class OrderbookData(models.Model):
     asks = models.JSONField()
     bids = models.JSONField()
 
+    class Meta:
+        unique_together = ('orderbook', 'timestamp')
+
     def __str__(self) -> str:
         return f'{self.timestamp} {self.orderbook}'
 

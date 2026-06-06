@@ -9,7 +9,7 @@ from orderbooks.models import Arbitrage
 
 
 class ArbitrageViewSet(ReadOnlyModelViewSet):
-    queryset = Arbitrage.latest.all()
+    queryset = Arbitrage.objects.all()
     serializer_class = ArbitrageSerializer
     pagination_class = PageNumberPagination
 
