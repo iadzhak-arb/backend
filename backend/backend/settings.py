@@ -52,11 +52,11 @@ MIDDLEWARE = [
 INTERNAL_IPS = ['127.0.0.1', ]  # TODO: remove on prod
 
 ROOT_URLCONF = 'backend.urls'
-TEMPLATES_DIRS = [BASE_DIR / 'templates']
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': TEMPLATES_DIRS,
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
