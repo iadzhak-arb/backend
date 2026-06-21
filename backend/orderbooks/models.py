@@ -115,6 +115,7 @@ class ArbitrageData(models.Model):
     volume_base = models.FloatField()
     volume_quote = models.FloatField()
 
+    objects = models.Manager()
     latest = LatestArbitrageDataManager()
 
     class Meta:

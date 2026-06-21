@@ -14,6 +14,10 @@ DEBUG = os.getenv('DEBUG', True)
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://localhost(?:\:\d+)?$",
+]
+
 # Application definition
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -28,6 +32,7 @@ THIRD_PARTY_APPS = [
     'debug_toolbar',  # TODO: remove on prod
     'django_filters',
     'rest_framework',
+    'corsheaders',
 ]
 
 CUSTOM_APPS = [
@@ -39,6 +44,7 @@ CUSTOM_APPS = [
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -102,6 +108,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
     ),
 }
 

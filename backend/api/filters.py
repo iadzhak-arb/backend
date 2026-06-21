@@ -1,6 +1,6 @@
 from django_filters import rest_framework as filters
 
-from orderbooks.models import Arbitrage
+from orderbooks.models import Arbitrage, ArbitrageData
 
 
 class ArbitrageHistoryFilter(filters.FilterSet):
@@ -24,3 +24,14 @@ class ArbitrageHistoryFilter(filters.FilterSet):
     class Meta:
         model = Arbitrage
         fields = ('buy_exchange', 'buy_symbol', 'sell_exchange', 'sell_symbol')
+
+
+class ArbitrageFilter(filters.FilterSet):
+    market_buy = filters.CharFilter(field_name='arbitrage__ob_buy__symbol__market__id')
+    market_sell = filters.CharFilter(field_name='arbitrage__ob_sell__symbol__market__id')
+    margin_min = filters.NumberFilter(field_name='margin', lookup_expr='gte')
+    margin_max = filters.NumberFilter(field_name='margin', lookup_expr='lte')
+
+    class Meta:
+        model = ArbitrageData
+        fields = ('market_buy', 'market_sell', 'margin_min', 'margin_max')
