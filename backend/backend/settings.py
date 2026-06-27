@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', True)
+DEBUG = os.getenv('DEBUG', 'True') == True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -32,7 +32,9 @@ THIRD_PARTY_APPS = [
     'debug_toolbar',  # TODO: remove on prod
     'django_filters',
     'rest_framework',
+    'djoser',
     'corsheaders',
+    'drf_spectacular',
 ]
 
 CUSTOM_APPS = [
@@ -106,10 +108,25 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Rst framework
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Arbitrage',
+    'DESCRIPTION': 'Арбитраж криптовалюты',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': True,
 }
 
 # Internationalization

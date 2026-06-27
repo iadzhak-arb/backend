@@ -12,16 +12,23 @@ class OrderbookSerializer(serializers.ModelSerializer):
 class ArbitrageDataSerializer(serializers.ModelSerializer):
     buy = OrderbookSerializer(source='arbitrage.ob_buy')
     sell = OrderbookSerializer(source='arbitrage.ob_sell')
+    arbitrage = serializers.SerializerMethodField()
 
     class Meta:
         model = ArbitrageData
         fields = ('arbitrage', 'buy', 'sell', 'margin', 'timestamp')
 
+    def get_arbitrage(self, obj):
+        return {
+            'open_id': getattr(obj, 'open_id', None),
+            'close_id': getattr(obj, 'close_id', None),
+        }
+
 
 class ArbitrageHistoryDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArbitrageData
-        fields = ('arbitrage', 'timestamp', 'margin')
+        fields = ('timestamp', 'margin')
 
 
 class MarketSerializer(serializers.ModelSerializer):

@@ -1,35 +1,37 @@
-from django.db.models import Min, Max
-from django.shortcuts import get_list_or_404
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from datetime import timedelta
 
-from .filters import ArbitrageFilter
+from django.db.models import Subquery, OuterRef, F
+from django.utils import timezone
+from rest_framework.mixins import ListModelMixin
+from rest_framework.viewsets import GenericViewSet
+
+from .filters import ArbitrageDataFilter, HistoryFilter
 from .pagination import PageLimitPagination
 from .serializers import ArbitrageDataSerializer, ArbitrageHistoryDataSerializer, MarketSerializer
 from orderbooks.models import Arbitrage, ArbitrageData, Market
 
 
-class ArbitrageViewSet(ReadOnlyModelViewSet):
-    queryset = ArbitrageData.latest.all().select_related(
-        'arbitrage__ob_buy__symbol',
-        'arbitrage__ob_buy__exchange',
-        'arbitrage__ob_sell__symbol',
-        'arbitrage__ob_sell__exchange',
-    )
+class ListReadOnlyModelViewSet(ListModelMixin, GenericViewSet):
+    pass
+
+
+class ArbitrageDataViewSet(ListReadOnlyModelViewSet):
+    queryset = ArbitrageData.latest.filter(timestamp__gte=timezone.now() - timedelta(hours=1))
     serializer_class = ArbitrageDataSerializer
     pagination_class = PageLimitPagination
-    filterset_class = ArbitrageFilter
+    filterset_class = ArbitrageDataFilter
+    ordering_fields = ('margin',)
     ordering = '-margin'
 
-    def retrieve(self, request, *args, **kwargs):
-        arbitrage = get_list_or_404(
-            ArbitrageData.objects.filter(arbitrage=kwargs['pk'])
-        )
-        serializer = ArbitrageHistoryDataSerializer(arbitrage, many=True)
-        return Response(serializer.data)
+
+class ArbitrageHistoryViewSet(ListReadOnlyModelViewSet):
+    queryset = ArbitrageData.objects.all()
+    serializer_class = ArbitrageHistoryDataSerializer
+    filterset_class = HistoryFilter
+    ordering_fields = ('timestamp',)
+    ordering = '-timestamp'
 
 
-class MarketViewSet(ReadOnlyModelViewSet):
+class MarketViewSet(ListReadOnlyModelViewSet):
     queryset = Market.objects.all()
     serializer_class = MarketSerializer
