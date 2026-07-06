@@ -1,11 +1,13 @@
 from django.db import models
 
-from .managers import LatestArbitrageDataManager
+from .managers import ArbitrageDataLatestManager, ArbitrageManager, TokenManager, ExchangeManager
 
 
 class Exchange(models.Model):
     id = models.CharField(primary_key=True)
     name = models.CharField()
+
+    objects = ExchangeManager()
 
     def __str__(self) -> str:
         return self.name
@@ -13,6 +15,8 @@ class Exchange(models.Model):
 
 class Token(models.Model):
     id = models.CharField(primary_key=True)
+
+    objects = TokenManager()
 
     def __str__(self) -> str:
         return self.id
@@ -34,19 +38,19 @@ class Symbol(models.Model):
     base = models.ForeignKey(
         Token,
         on_delete=models.CASCADE,
-        related_name='+'
+        related_name='symbol_base'
     )
     quote = models.ForeignKey(
         Token,
         on_delete=models.CASCADE,
-        related_name='+'
+        related_name='symbol_quote'
     )
     settle = models.ForeignKey(
         Token,
         on_delete=models.CASCADE,
         blank=True,
         null=True,
-        related_name='+'
+        related_name='symbol_settle'
     )
 
     def __str__(self) -> str:
@@ -96,6 +100,8 @@ class Arbitrage(models.Model):
         related_name='+',
     )
 
+    objects = ArbitrageManager()
+
     class Meta:
         unique_together = ('ob_buy', 'ob_sell')
 
@@ -106,7 +112,8 @@ class Arbitrage(models.Model):
 class ArbitrageData(models.Model):
     arbitrage = models.ForeignKey(
         Arbitrage,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='history'
     )
     timestamp = models.DateTimeField()
     margin = models.FloatField()
@@ -115,4 +122,4 @@ class ArbitrageData(models.Model):
     pk = models.CompositePrimaryKey('arbitrage_id', 'timestamp')
 
     objects = models.Manager()
-    latest = LatestArbitrageDataManager()
+    latest = ArbitrageDataLatestManager()

@@ -1,53 +1,50 @@
+from django.db.models import Q
 from django_filters import rest_framework as filters
 
-from orderbooks.models import Arbitrage, ArbitrageData
-
-
-class BackendFilters(filters.DjangoFilterBackend):
-    pass
-
-
-class ArbitrageHistoryFilter(filters.FilterSet):
-    buy_exchange = filters.CharFilter(
-        field_name='buy_exchange__name',
-        required=True
-    )
-    buy_symbol = filters.CharFilter(
-        field_name='buy_symbol__id',
-        required=True
-    )
-    sell_exchange = filters.CharFilter(
-        field_name='sell_exchange__name',
-        required=True
-    )
-    sell_symbol = filters.CharFilter(
-        field_name='sell_symbol__id',
-        required=True
-    )
-
-    class Meta:
-        model = Arbitrage
-        fields = ('buy_exchange', 'buy_symbol', 'sell_exchange', 'sell_symbol')
+from orderbooks.models import ArbitrageData
 
 
 class ArbitrageDataFilter(filters.FilterSet):
-    market_buy = filters.CharFilter(field_name='arbitrage__ob_buy__symbol__market__id')
-    market_sell = filters.CharFilter(field_name='arbitrage__ob_sell__symbol__market__id')
+    token = filters.CharFilter(method='token_filter')
+    quote = filters.CharFilter(method='quote_filter')
+    market_buy = filters.CharFilter(
+        field_name='arbitrage__ob_buy__symbol__market__id'
+    )
+    market_sell = filters.CharFilter(
+        field_name='arbitrage__ob_sell__symbol__market__id'
+    )
     margin_min = filters.NumberFilter(field_name='margin', lookup_expr='gte')
     margin_max = filters.NumberFilter(field_name='margin', lookup_expr='lte')
 
     class Meta:
         model = ArbitrageData
-        fields = ('market_buy', 'market_sell', 'margin_min', 'margin_max')
+        fields = ('market_buy', 'market_sell', 'margin_min', 'margin_max', 'token', 'quote')
         exclude = ('pk',)
 
+    def token_filter(self, queryset, name, value):
+        if not value:
+            return queryset
+        tokens = value.upper().split(',')
+        return queryset.filter(
+            arbitrage__ob_buy__symbol__base__id__in=tokens,
+            arbitrage__ob_sell__symbol__base__id__in=tokens,
+        )
 
-class HistoryFilter(filters.FilterSet):
-    arbitrage = filters.NumberFilter(
-        field_name='arbitrage__id',
-        required=True
-    )
+    def token_not_filter(self, queryset, name, value):
+        if not value:
+            return queryset
+        tokens = value.upper().split(',')
+        return queryset.exclude(
+            arbitrage__ob_buy__symbol__base__id__in=tokens
+        ).exclude(
+            arbitrage__ob_sell__symbol__base__id__in=tokens,
+        )
 
-    class Meta:
-        model = ArbitrageData
-        fields = ('arbitrage',)
+    def quote_filter(self, queryset, name, value):
+        if not value:
+            return queryset
+        quotes = value.upper().split(',')
+        return queryset.filter(
+            Q(arbitrage__ob_buy__symbol__quote__id__in=quotes),
+            Q(arbitrage__ob_sell__symbol__quote__id__in=quotes),
+        )

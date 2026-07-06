@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from orderbooks.models import Arbitrage, ArbitrageData, Orderbook, Market
+from orderbooks.models import Arbitrage, ArbitrageData, Orderbook, Market, Token, Exchange
 
 
 class OrderbookSerializer(serializers.ModelSerializer):
@@ -12,17 +12,11 @@ class OrderbookSerializer(serializers.ModelSerializer):
 class ArbitrageDataSerializer(serializers.ModelSerializer):
     buy = OrderbookSerializer(source='arbitrage.ob_buy')
     sell = OrderbookSerializer(source='arbitrage.ob_sell')
-    arbitrage = serializers.SerializerMethodField()
+    id = serializers.IntegerField(source='arbitrage.id')
 
     class Meta:
         model = ArbitrageData
-        fields = ('arbitrage', 'buy', 'sell', 'margin', 'timestamp')
-
-    def get_arbitrage(self, obj):
-        return {
-            'open_id': getattr(obj, 'open_id', None),
-            'close_id': getattr(obj, 'close_id', None),
-        }
+        fields = ('id', 'buy', 'sell', 'margin', 'volume_base', 'volume_quote', 'timestamp')
 
 
 class ArbitrageHistoryDataSerializer(serializers.ModelSerializer):
@@ -31,7 +25,17 @@ class ArbitrageHistoryDataSerializer(serializers.ModelSerializer):
         fields = ('timestamp', 'margin')
 
 
-class MarketSerializer(serializers.ModelSerializer):
+class ArbitrageSerializer(serializers.ModelSerializer):
+    name = serializers.CharField()
+
     class Meta:
-        model = Market
-        fields = ('id',)
+        model = Arbitrage
+        fields = ('id', 'name',)
+
+
+class ArbitrageRetrieveSerializer(ArbitrageSerializer):
+    history = ArbitrageHistoryDataSerializer(many=True)
+
+    class Meta:
+        model = Arbitrage
+        fields = ('id', 'name', 'history')
