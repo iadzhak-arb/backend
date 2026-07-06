@@ -1,19 +1,15 @@
-from datetime import timedelta
-
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from .constants import RESPONSE_LIST_STR
+from .constants import RESPONSE_LIST_STR, DELTA_FRESH
 from .filters import ArbitrageDataFilter
 from .pagination import PageLimitPagination
 from .serializers import ArbitrageDataSerializer, ArbitrageSerializer, \
     ArbitrageRetrieveSerializer
 from orderbooks.models import Arbitrage, ArbitrageData, Market, Token, Exchange
-
-DELTA = timedelta(hours=1000)
 
 
 class ArbitrageViewSet(ReadOnlyModelViewSet):
@@ -49,7 +45,7 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
     @action(
         detail=False,
         methods=['get'],
-        queryset=ArbitrageData.latest.by_time(DELTA).order_by('-margin'),
+        queryset=ArbitrageData.latest.by_time(DELTA_FRESH).order_by('-margin'),
         pagination_class=PageLimitPagination,
         filterset_class=ArbitrageDataFilter,
     )
@@ -99,7 +95,6 @@ class TokenViewSet(ViewSet):
     @extend_schema(responses=RESPONSE_LIST_STR)
     def list(self, request):
         token_ids = Token.objects.all_list()
-        print(token_ids[:5])
         return Response(token_ids)
 
     @action(detail=False, methods=['get'])
