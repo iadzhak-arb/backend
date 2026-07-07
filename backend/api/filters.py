@@ -7,6 +7,8 @@ from orderbooks.models import ArbitrageData
 class ArbitrageDataFilter(filters.FilterSet):
     token = filters.CharFilter(method='token_filter')
     quote = filters.CharFilter(method='quote_filter')
+    exchange_buy = filters.CharFilter(method='exchange_buy_filter')
+    exchange_sell = filters.CharFilter(method='exchange_sell_filter')
     market_buy = filters.CharFilter(
         field_name='arbitrage__ob_buy__symbol__market__id'
     )
@@ -47,4 +49,20 @@ class ArbitrageDataFilter(filters.FilterSet):
         return queryset.filter(
             Q(arbitrage__ob_buy__symbol__quote__id__in=quotes),
             Q(arbitrage__ob_sell__symbol__quote__id__in=quotes),
+        )
+
+    def exchange_buy_filter(self, queryset, name, value):
+        if not value:
+            return queryset
+        exchanges = value.split(',')
+        return queryset.filter(
+            arbitrage__ob_buy__exchange__name__in=exchanges,
+        )
+
+    def exchange_sell_filter(self, queryset, name, value):
+        if not value:
+            return queryset
+        exchanges = value.split(',')
+        return queryset.filter(
+            arbitrage__ob_sell__exchange__name__in=exchanges,
         )
