@@ -1,7 +1,6 @@
 from datetime import timedelta
 
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiResponse, inline_serializer
+from drf_spectacular.utils import OpenApiResponse
 
 DELTA_FRESH = timedelta(hours=1000)
 RESPONSE_STR = OpenApiResponse(
