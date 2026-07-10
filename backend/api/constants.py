@@ -1,16 +1,17 @@
 from datetime import timedelta
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiResponse, inline_serializer
+
 DELTA_FRESH = timedelta(hours=1000)
-RESPONSE_LIST_STR = {
-    200: {
-        'description': 'Список токенов',
-        'content': {
-            'application/json': {
-                'schema': {
-                    'type': 'array',
-                    'items': {'type': 'string'}
-                }
-            }
-        }
+RESPONSE_STR = OpenApiResponse(
+    response={
+        'type': 'string',
     }
-}
+)
+RESPONSE_LIST_STR = OpenApiResponse(
+    response={
+        'type': 'array',
+        'items': {'type': 'string'}
+    }
+)

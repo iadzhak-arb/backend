@@ -4,7 +4,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from .constants import RESPONSE_LIST_STR, DELTA_FRESH
+from .constants import RESPONSE_LIST_STR, DELTA_FRESH, RESPONSE_STR
 from .filters import ArbitrageDataFilter
 from .pagination import PageLimitPagination
 from .serializers import ArbitrageDataSerializer, ArbitrageSerializer, \
@@ -81,40 +81,42 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
-@extend_schema(responses=RESPONSE_LIST_STR)
 class MarketViewSet(ViewSet):
+    @extend_schema(responses=RESPONSE_STR)
     def list(self, request):
         market_ids = Market.objects.values_list('id', flat=True)
         return Response(market_ids)
 
 
-@extend_schema(responses=list[str])
 class TokenViewSet(ViewSet):
     serializer_class = None
 
-    @extend_schema(responses=RESPONSE_LIST_STR)
+    @extend_schema(responses=RESPONSE_STR)
     def list(self, request):
         token_ids = Token.objects.all_list()
         return Response(token_ids)
 
+    @extend_schema(responses=RESPONSE_LIST_STR)
     @action(detail=False, methods=['get'])
     def base(self, request):
         token_ids = Token.objects.base_list()
         return Response(token_ids)
 
+    @extend_schema(responses=RESPONSE_LIST_STR)
     @action(detail=False, methods=['get'])
     def quote(self, request):
         token_ids = Token.objects.quote_list()
         return Response(token_ids)
 
+    @extend_schema(responses=RESPONSE_LIST_STR)
     @action(detail=False, methods=['get'])
     def settle(self, request):
         token_ids = Token.objects.settle_list()
         return Response(token_ids)
 
 
-@extend_schema(responses=RESPONSE_LIST_STR)
 class ExchangeViewSet(ViewSet):
+    @extend_schema(responses=RESPONSE_STR)
     def list(self, request):
         exchange_names = Exchange.objects.name_list()
         return Response(exchange_names)
