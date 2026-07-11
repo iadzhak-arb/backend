@@ -4,7 +4,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from .constants import RESPONSE_LIST_STR, DELTA_FRESH, RESPONSE_STR
+from .constants import RESPONSE_LIST_STR, DELTA_FRESH, RESPONSE_STR, DEMO_SIZE
 from .filters import ArbitrageDataFilter
 from .pagination import PageLimitPagination
 from .serializers import ArbitrageDataSerializer, ArbitrageSerializer, \
@@ -60,7 +60,7 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         detail=False,
         methods=['get'],
         url_path='demo-spot',
-        queryset=ArbitrageData.latest.demo('spot', 'spot'),
+        queryset=ArbitrageData.latest.demo('spot', 'spot', size=DEMO_SIZE),
         pagination_class=None
     )
     def demo_spot_spot(self, request):
@@ -73,7 +73,7 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         detail=False,
         methods=['get'],
         url_path='demo-swap',
-        queryset=ArbitrageData.latest.demo('spot', 'swap'),
+        queryset=ArbitrageData.latest.demo('spot', 'swap', size=DEMO_SIZE),
         pagination_class=None)
     def demo_spot_swap(self, request):
         qs = self.get_queryset()
