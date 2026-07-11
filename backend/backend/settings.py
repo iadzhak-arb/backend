@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.core.management.utils import get_random_secret_key
@@ -12,9 +13,12 @@ SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.0.100').split(',')
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 
 # Application definition
 DJANGO_APPS = [
@@ -30,7 +34,10 @@ THIRD_PARTY_APPS = [
     'debug_toolbar',  # TODO: remove on prod
     'django_filters',
     'rest_framework',
-    'djoser',
+    'rest_framework_simplejwt',
+    'allauth',
+    'allauth.account',
+    'auth_kit',
     'corsheaders',
     'drf_spectacular',
 ]
@@ -52,7 +59,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware'  # TODO: remove on prod
+    'debug_toolbar.middleware.DebugToolbarMiddleware',  # TODO: remove on prod
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 INTERNAL_IPS = ['127.0.0.1', ]  # TODO: remove on prod
@@ -104,10 +112,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Rst framework
+# Rest framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'auth_kit.authentication.JWTCookieAuthentication',
     ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -115,8 +123,14 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-DJOSER = {
-    'LOGIN_FIELD': 'email',
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
 SPECTACULAR_SETTINGS = {
