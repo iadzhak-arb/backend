@@ -1,6 +1,9 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
@@ -16,6 +19,8 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
     queryset = Arbitrage.objects.with_name()
     serializer_class = ArbitrageSerializer
     pagination_class = PageLimitPagination
+    filter_backends = [SearchFilter, DjangoFilterBackend]
+    search_fields = ['name']
     filterset_class = None
 
     def get_queryset(self):
@@ -47,6 +52,7 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         methods=['get'],
         queryset=ArbitrageData.latest.by_time(DELTA_FRESH).order_by('-margin'),
         pagination_class=PageLimitPagination,
+        filter_backends=[DjangoFilterBackend],
         filterset_class=ArbitrageDataFilter,
     )
     def latest(self, request):
@@ -61,7 +67,8 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         methods=['get'],
         url_path='demo-spot',
         queryset=ArbitrageData.latest.demo('spot', 'spot', size=DEMO_SIZE),
-        pagination_class=None
+        pagination_class=None,
+        filter_backends=[]
     )
     def demo_spot_spot(self, request):
         qs = self.get_queryset()
@@ -74,7 +81,9 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         methods=['get'],
         url_path='demo-swap',
         queryset=ArbitrageData.latest.demo('spot', 'swap', size=DEMO_SIZE),
-        pagination_class=None)
+        pagination_class=None,
+        filter_backends=[]
+    )
     def demo_spot_swap(self, request):
         qs = self.get_queryset()
         serializer = self.get_serializer(qs, many=True)
@@ -82,6 +91,8 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
 
 
 class MarketViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(responses=RESPONSE_STR)
     def list(self, request):
         market_ids = Market.objects.values_list('id', flat=True)
@@ -89,6 +100,7 @@ class MarketViewSet(ViewSet):
 
 
 class TokenViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
     serializer_class = None
 
     @extend_schema(responses=RESPONSE_STR)
@@ -116,6 +128,8 @@ class TokenViewSet(ViewSet):
 
 
 class ExchangeViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(responses=RESPONSE_STR)
     def list(self, request):
         exchange_names = Exchange.objects.name_list()

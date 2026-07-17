@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from orderbooks.models import Arbitrage, ArbitrageData, Orderbook, Market, Token, Exchange
+from orderbooks.models import Arbitrage, ArbitrageData, Orderbook
 
 
 class OrderbookSerializer(serializers.ModelSerializer):
