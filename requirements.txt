@@ -1,10 +1,12 @@
 django==6.0.6
+django-allauth==65.18.0
 django-cors-headers==4.9.0
 django-filter==25.2
 djangorestframework==3.17.1
 django-debug-toolbar==6.3.0
 djangorestframework_simplejwt==5.5.1
 djoser==2.3.3
+drf-auth-kit==1.6.0
 drf-spectacular==0.29.0
 faststream[cli, rabbit]==0.6.7
 starlette==1.2.0

@@ -35,7 +35,9 @@ class ArbitrageSerializer(serializers.ModelSerializer):
 
 class ArbitrageRetrieveSerializer(ArbitrageSerializer):
     history = ArbitrageHistoryDataSerializer(many=True)
+    buy = OrderbookSerializer(source='ob_buy')
+    sell = OrderbookSerializer(source='ob_sell')
 
     class Meta:
         model = Arbitrage
-        fields = ('id', 'name', 'history')
+        fields = ('id', 'name', 'history', 'buy', 'sell')

@@ -1,20 +1,23 @@
 from datetime import timedelta
 
 from django.db import models
-from django.db.models import Window, Subquery, OuterRef, F, Value, Prefetch
-from django.db.models.functions import RowNumber, Concat
+from django.db.models import Window, Subquery, OuterRef, F, Value, Prefetch, Count
+from django.db.models.functions import RowNumber, Concat, Abs, ExtractSecond
 from django.utils import timezone
 
 
 class ArbitrageDataLatestManager(models.Manager):
     def get_queryset(self):
-        qs = super().get_queryset()
+        inner = super().get_queryset()
         window = Window(
             expression=RowNumber(),
             partition_by=models.F('arbitrage'),
             order_by=models.F('timestamp').desc()
         )
-        qs = qs.annotate(row_num=window).filter(row_num=1)
+        inner = inner.annotate(row_num=window).filter(row_num=1).values('id')
+        qs = super().get_queryset().filter(
+            id__in=Subquery(inner)
+        )
         qs = qs.select_related(
             'arbitrage__ob_buy__symbol',
             'arbitrage__ob_buy__exchange',
@@ -41,7 +44,35 @@ class ArbitrageDataLatestManager(models.Manager):
             arbitrage__ob_sell__symbol__market__id=market_sell,
             margin__gte=margin_gte,
             margin__lte=margin_lte
-        ).order_by('-margin', '-timestamp')[:size]
+        ).order_by('-margin')[:size]
+
+    def uptime(self):
+        inner = super().get_queryset().values(
+            'arbitrage_id').annotate(
+            count=Count('id')
+        ).filter(count__gte=2).values_list('arbitrage_id', flat=True)
+        ts_1 = super().get_queryset().filter(
+            arbitrage_id=OuterRef('arbitrage_id')
+        ).order_by('-timestamp').values('timestamp')[:1]
+        ts_2 = super().get_queryset().filter(
+            arbitrage_id=OuterRef('arbitrage_id')
+        ).order_by('-timestamp').values('timestamp')[1:2]
+        qs = super().get_queryset().filter(
+            arbitrage_id__in=inner
+        ).annotate(
+            t1=ts_1,
+            t2=ts_2,
+            diff=F('t1') - F('t2')
+        )
+        summ = 0
+        count = inner.count()
+        for q in qs:
+            if isinstance(q.diff, timedelta):
+                summ += q.diff.total_seconds()
+            else:
+                count -= 1
+        result = round(summ / count, 2) if count > 0 else 0
+        return result
 
 
 class ArbitrageManager(models.Manager):

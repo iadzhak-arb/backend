@@ -1,18 +1,19 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
-from .constants import RESPONSE_LIST_STR, DELTA_FRESH, RESPONSE_STR, DEMO_SIZE
+from .constants import RESPONSE_LIST_STR, DELTA_FRESH, RESPONSE_STR, DEMO_SIZE, RESPONSE_SUMMARY
 from .filters import ArbitrageDataFilter
 from .pagination import PageLimitPagination
 from .serializers import ArbitrageDataSerializer, ArbitrageSerializer, \
     ArbitrageRetrieveSerializer
-from orderbooks.models import Arbitrage, ArbitrageData, Market, Token, Exchange
+from orderbooks.models import Arbitrage, ArbitrageData, Market, Token, Exchange, Symbol
 
 
 class ArbitrageViewSet(ReadOnlyModelViewSet):
@@ -26,6 +27,12 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
         if self.action == 'retrieve':
             return Arbitrage.objects.with_history()
+        if self.action == 'demo_spot_spot':
+            return ArbitrageData.latest.demo('spot', 'spot', size=DEMO_SIZE)
+        if self.action == 'demo_spot_swap':
+            return ArbitrageData.latest.demo('spot', 'swap', size=DEMO_SIZE)
+        if self.action == 'latest':
+            return ArbitrageData.latest.by_time(DELTA_FRESH).order_by('-margin')
         return super().get_queryset()
 
     def get_serializer_class(self):
@@ -66,9 +73,8 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         detail=False,
         methods=['get'],
         url_path='demo-spot',
-        queryset=ArbitrageData.latest.demo('spot', 'spot', size=DEMO_SIZE),
         pagination_class=None,
-        filter_backends=[]
+        filter_backends=[],
     )
     def demo_spot_spot(self, request):
         qs = self.get_queryset()
@@ -80,7 +86,6 @@ class ArbitrageViewSet(ReadOnlyModelViewSet):
         detail=False,
         methods=['get'],
         url_path='demo-swap',
-        queryset=ArbitrageData.latest.demo('spot', 'swap', size=DEMO_SIZE),
         pagination_class=None,
         filter_backends=[]
     )
@@ -134,3 +139,22 @@ class ExchangeViewSet(ViewSet):
     def list(self, request):
         exchange_names = Exchange.objects.name_list()
         return Response(exchange_names)
+
+
+class SummaryView(APIView):
+    @extend_schema(responses=RESPONSE_SUMMARY)
+    def get(self, request):
+        exchanges_count = Exchange.objects.values('name').distinct().count()
+        symbols_count = Symbol.objects.count()
+        deals_profit_count = ArbitrageData.latest.filter(
+            margin__gt=0.5,
+            margin__lt=100
+        ).count()
+        uptime = ArbitrageData.latest.uptime()
+        data = {
+            'exchanges': exchanges_count,
+            'symbols': symbols_count,
+            'profit_deals': deals_profit_count,
+            'uptime': uptime
+        }
+        return Response(data)

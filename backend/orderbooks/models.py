@@ -75,7 +75,6 @@ class Orderbook(models.Model):
 
 
 class OrderbookData(models.Model):
-    pk = models.CompositePrimaryKey('orderbook_id', 'timestamp')
     orderbook = models.ForeignKey(
         Orderbook,
         on_delete=models.CASCADE
@@ -83,6 +82,9 @@ class OrderbookData(models.Model):
     timestamp = models.DateTimeField()
     asks = models.JSONField()
     bids = models.JSONField()
+
+    class Meta:
+        unique_together = ('orderbook', 'timestamp')
 
     def __str__(self) -> str:
         return f'{self.timestamp} {self.orderbook}'
@@ -119,7 +121,9 @@ class ArbitrageData(models.Model):
     margin = models.FloatField()
     volume_base = models.FloatField()
     volume_quote = models.FloatField()
-    pk = models.CompositePrimaryKey('arbitrage_id', 'timestamp')
 
     objects = models.Manager()
     latest = ArbitrageDataLatestManager()
+
+    class Meta:
+        unique_together = ('arbitrage', 'timestamp')
